@@ -387,11 +387,12 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
     # TABS
     # =================================================
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📈 Price Analysis",
         "📊 Market Statistics",
         "🤖 Model Performance",
-        "📋 Historical Data"
+        "📋 Historical Data",
+        "🆚 Stock Comparison"
     ])
 
 
@@ -567,6 +568,107 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
             file_name=f"{stock_name}_historical_data.csv",
             mime="text/csv"
         )
+
+
+    # =================================================
+    # STOCK COMPARISON
+    # =================================================
+
+    with tab5:
+
+        st.subheader(
+            "🆚 Compare Two Stocks"
+        )
+
+        comparison_col1, comparison_col2 = st.columns(2)
+
+        stock1 = comparison_col1.selectbox(
+            "Select First Stock",
+            list(stocks.keys()),
+            index=0,
+            key="stock1"
+        )
+
+        stock2 = comparison_col2.selectbox(
+            "Select Second Stock",
+            list(stocks.keys()),
+            index=1,
+            key="stock2"
+        )
+
+
+        if stock1 == stock2:
+
+            st.warning(
+                "Please select two different stocks."
+            )
+
+        else:
+
+            with st.spinner(
+                "Loading comparison data..."
+            ):
+
+                data1 = load_data(
+                    stocks[stock1],
+                    period
+                )
+
+                data2 = load_data(
+                    stocks[stock2],
+                    period
+                )
+
+
+            if data1.empty or data2.empty:
+
+                st.error(
+                    "Unable to retrieve comparison data."
+                )
+
+            else:
+
+                comparison_data = pd.DataFrame({
+                    stock1: data1["Close"],
+                    stock2: data2["Close"]
+                }).dropna()
+
+
+                st.subheader(
+                    "📈 Historical Price Comparison"
+                )
+
+                st.line_chart(
+                    comparison_data,
+                    use_container_width=True
+                )
+
+
+                st.subheader(
+                    "📊 Current Price Comparison"
+                )
+
+                compare1, compare2 = st.columns(2)
+
+                with compare1:
+
+                    st.metric(
+                        stock1,
+                        f"₹{data1['Close'].iloc[-1]:,.2f}"
+                    )
+
+                with compare2:
+
+                    st.metric(
+                        stock2,
+                        f"₹{data2['Close'].iloc[-1]:,.2f}"
+                    )
+
+
+                st.info(
+                    "The comparison chart displays the "
+                    "historical closing prices of the selected stocks."
+                )
 
 
 # =====================================================
