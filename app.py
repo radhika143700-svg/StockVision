@@ -148,7 +148,7 @@ def load_data(symbol, period):
 
 
 # =====================================================
-# ANALYZE
+# ANALYZE STOCK
 # =====================================================
 
 if st.button("🚀 Analyze Stock", use_container_width=True):
@@ -309,7 +309,7 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
 
 
     # =================================================
-    # SUCCESS
+    # SUCCESS MESSAGE
     # =================================================
 
     st.success(
@@ -523,6 +523,17 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
         st.dataframe(
             data.tail(100),
             use_container_width=True
+        )
+
+        # DOWNLOAD BUTTON
+
+        csv = data.to_csv().encode("utf-8")
+
+        st.download_button(
+            label="📥 Download Historical Data",
+            data=csv,
+            file_name=f"{stock_name}_historical_data.csv",
+            mime="text/csv"
         )
 
 
