@@ -495,8 +495,37 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
                 f"{r2:.4f}"
             )
 
+
+        # =============================================
+        # FEATURE IMPORTANCE
+        # =============================================
+
         st.subheader(
-            "Actual vs Predicted Price"
+            "📌 Feature Importance"
+        )
+
+        feature_importance = pd.DataFrame({
+            "Feature": features,
+            "Importance": model.feature_importances_
+        })
+
+        feature_importance = feature_importance.sort_values(
+            "Importance",
+            ascending=False
+        )
+
+        st.bar_chart(
+            feature_importance.set_index("Feature")["Importance"],
+            use_container_width=True
+        )
+
+
+        # =============================================
+        # ACTUAL VS PREDICTED
+        # =============================================
+
+        st.subheader(
+            "📈 Actual vs Predicted Price"
         )
 
         comparison = pd.DataFrame({
@@ -525,7 +554,10 @@ if st.button("🚀 Analyze Stock", use_container_width=True):
             use_container_width=True
         )
 
-        # DOWNLOAD BUTTON
+
+        # =============================================
+        # DOWNLOAD DATA
+        # =============================================
 
         csv = data.to_csv().encode("utf-8")
 
