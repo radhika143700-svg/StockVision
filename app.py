@@ -1,3 +1,4 @@
+%%writefile app.py
 
 import streamlit as st
 import yfinance as yf
@@ -8,9 +9,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
-# =========================
-# PAGE SETTINGS
-# =========================
+# ---------------- PAGE CONFIG ----------------
 
 st.set_page_config(
     page_title="StockVision",
@@ -18,17 +17,19 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# ---------------- HEADER ----------------
+
 st.title("📈 StockVision")
-st.subheader("AI-Powered Stock Price Prediction")
+st.subheader("AI-Powered Stock Market Analysis & Prediction")
 
 st.write(
-    "Analyze historical stock data and estimate the next trading day's closing price."
+    "Analyze historical stock data, identify market trends "
+    "and generate machine-learning based price predictions."
 )
 
 
-# =========================
-# STOCK LIST
-# =========================
+# ---------------- STOCK LIST ----------------
 
 stocks = {
     "Reliance Industries": "RELIANCE.NS",
@@ -36,27 +37,36 @@ stocks = {
     "Infosys": "INFY.NS",
     "HDFC Bank": "HDFCBANK.NS",
     "ICICI Bank": "ICICIBANK.NS",
-    "ITC": "ITC.NS"
+    "ITC": "ITC.NS",
+    "State Bank of India": "SBIN.NS",
+    "Bharti Airtel": "BHARTIARTL.NS"
 }
 
 
-stock_name = st.selectbox(
-    "🏦 Select a Stock",
+# ---------------- SIDEBAR ----------------
+
+st.sidebar.header("⚙️ Stock Settings")
+
+stock_name = st.sidebar.selectbox(
+    "Select Stock",
     list(stocks.keys())
+)
+
+period = st.sidebar.selectbox(
+    "Historical Data",
+    ["1y", "2y", "5y"]
 )
 
 symbol = stocks[stock_name]
 
 
-# =========================
-# DOWNLOAD DATA
-# =========================
+# ---------------- LOAD DATA ----------------
 
 @st.cache_data
-def load_data(symbol):
+def load_data(symbol, period):
 
     data = yf.Ticker(symbol).history(
-        period="5y",
+        period=period,
         interval="1d",
         auto_adjust=False
     )
@@ -64,59 +74,65 @@ def load_data(symbol):
     return data
 
 
-# =========================
-# ANALYZE BUTTON
-# =========================
+# ---------------- ANALYZE BUTTON ----------------
 
 if st.button("🚀 Analyze Stock"):
 
-    with st.spinner("Fetching stock data and training model..."):
+    with st.spinner("Downloading market data and training model..."):
 
-        data = load_data(symbol)
+        data = load_data(symbol, period)
 
     if data.empty:
 
-        st.error("❌ Stock data could not be downloaded. Please try again.")
+        st.error(
+            "Stock data could not be downloaded. Please try again."
+        )
 
     else:
 
         data = data.dropna()
 
-        # =========================
-        # FEATURE ENGINEERING
-        # =========================
+        # Technical indicators
 
         data["MA_7"] = data["Close"].rolling(7).mean()
         data["MA_30"] = data["Close"].rolling(30).mean()
 
-        data["Previous_Close"] = data["Close"].shift(1)
-
         data["Daily_Return"] = data["Close"].pct_change()
 
-        # NEXT DAY CLOSE = TARGET
+        data["Volatility"] = (
+            data["Daily_Return"]
+            .rolling(7)
+            .std()
+        )
+
+        data["Previous_Close"] = data["Close"].shift(1)
+
+        # Target = next day's closing price
+
         data["Next_Close"] = data["Close"].shift(-1)
 
         data = data.dropna()
+
+
+        # ---------------- FEATURES ----------------
 
         features = [
             "Open",
             "High",
             "Low",
-            "Close",
             "Volume",
             "MA_7",
             "MA_30",
-            "Previous_Close",
-            "Daily_Return"
+            "Daily_Return",
+            "Volatility",
+            "Previous_Close"
         ]
 
         X = data[features]
         y = data["Next_Close"]
 
 
-        # =========================
-        # TRAIN / TEST SPLIT
-        # =========================
+        # ---------------- TRAIN TEST SPLIT ----------------
 
         split = int(len(data) * 0.8)
 
@@ -127,9 +143,7 @@ if st.button("🚀 Analyze Stock"):
         y_test = y.iloc[split:]
 
 
-        # =========================
-        # RANDOM FOREST MODEL
-        # =========================
+        # ---------------- MODEL ----------------
 
         model = RandomForestRegressor(
             n_estimators=200,
@@ -141,29 +155,37 @@ if st.button("🚀 Analyze Stock"):
         model.fit(X_train, y_train)
 
 
-        # =========================
-        # TEST PREDICTIONS
-        # =========================
+        # ---------------- PREDICTION ----------------
 
         predictions = model.predict(X_test)
 
-        mae = mean_absolute_error(y_test, predictions)
 
-        rmse = np.sqrt(
-            mean_squared_error(y_test, predictions)
+        # ---------------- PERFORMANCE ----------------
+
+        mae = mean_absolute_error(
+            y_test,
+            predictions
         )
 
-        r2 = r2_score(y_test, predictions)
+        rmse = np.sqrt(
+            mean_squared_error(
+                y_test,
+                predictions
+            )
+        )
+
+        r2 = r2_score(
+            y_test,
+            predictions
+        )
 
 
-        # =========================
-        # NEXT DAY PREDICTION
-        # =========================
+        # ---------------- NEXT PRICE ----------------
 
-        latest_data = data[features].iloc[-1:]
+        latest_features = data[features].iloc[-1:].values
 
         predicted_price = float(
-            model.predict(latest_data)[0]
+            model.predict(latest_features)[0]
         )
 
         current_price = float(
@@ -176,81 +198,151 @@ if st.button("🚀 Analyze Stock"):
         ) * 100
 
 
-        # =========================
-        # RESULTS
-        # =========================
+        # ---------------- SUCCESS ----------------
 
         st.success(
             f"Analysis completed for {stock_name}"
         )
 
+
+        # ---------------- METRICS ----------------
+
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+
             st.metric(
                 "Current Price",
                 f"₹{current_price:,.2f}"
             )
 
         with col2:
+
             st.metric(
-                "Predicted Next Close",
+                "Predicted Next Price",
                 f"₹{predicted_price:,.2f}"
             )
 
         with col3:
+
             st.metric(
                 "Expected Change",
                 f"{expected_change:.2f}%"
             )
 
         with col4:
+
             st.metric(
                 "R² Score",
                 f"{r2:.4f}"
             )
 
 
-        # =========================
-        # PRICE CHART
-        # =========================
+        # ---------------- PRICE CHART ----------------
 
-        st.subheader("📊 Historical Stock Price")
+        st.subheader("📈 Historical Stock Price")
 
-        chart_data = data[["Close"]].copy()
-
-        st.line_chart(chart_data)
+        st.line_chart(
+            data["Close"]
+        )
 
 
-        # =========================
-        # MODEL PERFORMANCE
-        # =========================
+        # ---------------- MOVING AVERAGES ----------------
 
-        st.subheader("🤖 Model Performance")
+        st.subheader("📊 Moving Average Analysis")
 
-        col1, col2 = st.columns(2)
+        chart_data = data[
+            ["Close", "MA_7", "MA_30"]
+        ]
 
-        with col1:
+        st.line_chart(
+            chart_data
+        )
 
-            st.write(f"**MAE:** {mae:.2f}")
 
-            st.write(f"**RMSE:** {rmse:.2f}")
+        # ---------------- MARKET STATISTICS ----------------
 
-        with col2:
+        st.subheader("📌 Market Statistics")
 
-            st.write(f"**R² Score:** {r2:.4f}")
+        stat1, stat2, stat3, stat4 = st.columns(4)
 
-            st.write(
-                f"**Training Data:** {len(X_train):,} records"
+        with stat1:
+
+            st.metric(
+                "Highest Price",
+                f"₹{data['High'].max():,.2f}"
+            )
+
+        with stat2:
+
+            st.metric(
+                "Lowest Price",
+                f"₹{data['Low'].min():,.2f}"
+            )
+
+        with stat3:
+
+            st.metric(
+                "Average Price",
+                f"₹{data['Close'].mean():,.2f}"
+            )
+
+        with stat4:
+
+            st.metric(
+                "Average Volume",
+                f"{data['Volume'].mean():,.0f}"
             )
 
 
-        # =========================
-        # DISCLAIMER
-        # =========================
+        # ---------------- MODEL PERFORMANCE ----------------
 
-        st.warning(
-            "⚠️ This prediction is generated by a machine learning model "
-            "using historical data. It is an estimate and should not be "
-            "treated as financial advice."
-        )
+        st.subheader("🤖 Model Performance")
+
+        performance1, performance2 = st.columns(2)
+
+        with performance1:
+
+            st.write(
+                f"**MAE:** {mae:.2f}"
+            )
+
+            st.write(
+                f"**RMSE:** {rmse:.2f}"
+            )
+
+            st.write(
+                f"**R² Score:** {r2:.4f}"
+            )
+
+        with performance2:
+
+            comparison = pd.DataFrame({
+                "Actual": y_test.values,
+                "Predicted": predictions
+            })
+
+            st.line_chart(
+                comparison
+            )
+
+
+        # ---------------- DATA ----------------
+
+        with st.expander("📋 View Historical Data"):
+
+            st.dataframe(
+                data.tail(100),
+                use_container_width=True
+            )
+
+
+# ---------------- DISCLAIMER ----------------
+
+st.markdown("---")
+
+st.info(
+    "⚠️ StockVision provides machine-learning based estimates "
+    "for educational and analytical purposes only. "
+    "Predictions should not be treated as financial advice."
+)
