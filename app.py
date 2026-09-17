@@ -91,7 +91,7 @@ if st.button("🚀 Analyze Stock"):
 
         data = data.dropna()
 
-        # Technical indicators
+        # ---------------- TECHNICAL INDICATORS ----------------
 
         data["MA_7"] = data["Close"].rolling(7).mean()
         data["MA_30"] = data["Close"].rolling(30).mean()
@@ -106,7 +106,7 @@ if st.button("🚀 Analyze Stock"):
 
         data["Previous_Close"] = data["Close"].shift(1)
 
-        # Target = next day's closing price
+        # Next day's closing price = prediction target
 
         data["Next_Close"] = data["Close"].shift(-1)
 
@@ -154,12 +154,12 @@ if st.button("🚀 Analyze Stock"):
         model.fit(X_train, y_train)
 
 
-        # ---------------- PREDICTION ----------------
+        # ---------------- TEST PREDICTIONS ----------------
 
         predictions = model.predict(X_test)
 
 
-        # ---------------- PERFORMANCE ----------------
+        # ---------------- MODEL PERFORMANCE ----------------
 
         mae = mean_absolute_error(
             y_test,
@@ -179,7 +179,7 @@ if st.button("🚀 Analyze Stock"):
         )
 
 
-        # ---------------- NEXT PRICE ----------------
+        # ---------------- NEXT PRICE PREDICTION ----------------
 
         latest_features = data[features].iloc[-1:].values
 
@@ -197,14 +197,29 @@ if st.button("🚀 Analyze Stock"):
         ) * 100
 
 
-        # ---------------- SUCCESS ----------------
+        # ---------------- PREDICTION SIGNAL ----------------
+
+        if expected_change > 1:
+
+            signal = "📈 Potential Upward Movement"
+
+        elif expected_change < -1:
+
+            signal = "📉 Potential Downward Movement"
+
+        else:
+
+            signal = "➡️ Relatively Stable"
+
+
+        # ---------------- SUCCESS MESSAGE ----------------
 
         st.success(
             f"Analysis completed for {stock_name}"
         )
 
 
-        # ---------------- METRICS ----------------
+        # ---------------- MAIN METRICS ----------------
 
         col1, col2, col3, col4 = st.columns(4)
 
@@ -237,7 +252,16 @@ if st.button("🚀 Analyze Stock"):
             )
 
 
-        # ---------------- PRICE CHART ----------------
+        # ---------------- PREDICTION SIGNAL ----------------
+
+        st.subheader("🔮 Prediction Signal")
+
+        st.info(
+            f"Model-based indication: **{signal}**"
+        )
+
+
+        # ---------------- HISTORICAL PRICE ----------------
 
         st.subheader("📈 Historical Stock Price")
 
@@ -326,7 +350,7 @@ if st.button("🚀 Analyze Stock"):
             )
 
 
-        # ---------------- DATA ----------------
+        # ---------------- HISTORICAL DATA TABLE ----------------
 
         with st.expander("📋 View Historical Data"):
 
